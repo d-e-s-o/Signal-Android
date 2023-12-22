@@ -3,10 +3,6 @@ name: Android CI
 on:
   pull_request:
   push:
-    branches:
-    - 'main'
-    - '4.**'
-    - '5.**'
 
 permissions:
   contents: read # to fetch code (actions/checkout)
@@ -32,11 +28,17 @@ jobs:
       run: $ANDROID_HOME/tools/bin/sdkmanager --uninstall "platforms;android-31"
 
     - name: Build with Gradle
-      run: ./gradlew qa
+      run: ./gradlew assemblePlayProdRelease
 
-    - name: Archive reports for failed build
-      if: ${{ failure() }}
+    - name: Sign the crap
+      run: |
+        cd app/build/outputs/apk/playProd/release/
+        keytool -dname "CN=commonName, OU=organizationUnit, O=organizationName, L=localityName, S=stateName, C=country" -keypass yourmother -storepass yourmother -genkey -v -keystore example.keystore -alias SomeAlias -keyalg RSA -keysize 4096
+        jarsigner -keypass yourmother -storepass yourmother -verbose -keystore example.keystore Signal-Android-play-prod-armeabi-v7a-release-unsigned-6.8.3.apk SomeAlias
+
+    - run: ls -alR .
+
+    - name: Upload stuff
       uses: actions/upload-artifact@v3
       with:
-        name: reports
-        path: '*/build/reports'
+        path: 'app/build/outputs/apk/playProd/release/Signal-Android-play-prod-armeabi-v7a-release-unsigned-6.8.3.apk'
